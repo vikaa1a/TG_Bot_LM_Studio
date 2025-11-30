@@ -1,6 +1,5 @@
-# TG_Bot_LM_Studio_example_1
+# TG_Bot_LM_Studio
  
-
 Telegram бот с поддержкой контекста диалога, использующий локальную языковую модель через LM Studio.
 
 ## Функциональность бота
@@ -27,4 +26,5 @@ pip install -r requirements.txt
 
 3. Запуск
 python main.py
+
 
