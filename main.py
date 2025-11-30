@@ -3,14 +3,11 @@ import requests
 import jsons
 from Class_ModelResponse import ModelResponse
 
-# Замените 'YOUR_BOT_TOKEN' на ваш токен от BotFather
 API_TOKEN = '8226018885:AAHv2bMa0a3bNyWXxtfwJpDQ3MBwwTlDyRY'
 bot = telebot.TeleBot(API_TOKEN)
 
-# Словарь для хранения контекста пользователей
 user_contexts = {}
 
-# Максимальное количество сообщений в истории
 MAX_CONTEXT_MESSAGES = 10
 
 def get_user_context(user_id):
@@ -37,7 +34,6 @@ def add_user_message(user_id, message):
     context = get_user_context(user_id)
     context.append({"role": "user", "content": message})
     
-    # Ограничиваем размер контекста
     if len(context) > MAX_CONTEXT_MESSAGES * 2:
         user_contexts[user_id] = context[-(MAX_CONTEXT_MESSAGES * 2):]
 
@@ -51,7 +47,6 @@ def clear_context(user_id):
     if user_id in user_contexts:
         user_contexts[user_id] = []
 
-# Команды
 @bot.message_handler(commands=['start'])
 def send_welcome(message):
     welcome_text = (
@@ -109,17 +104,14 @@ def handle_message(message):
     user_message = message.text
     
     try:
-        # Добавляем сообщение пользователя в контекст
         add_user_message(user_id, user_message)
         
-        # Получаем текущий контекст пользователя
         context = get_user_context(user_id)
         
         print(f"👤 User {user_id}: {user_message}")
         print(f"📊 Размер контекста: {len(context)} сообщений")
         print(f"📋 Контекст: {context}")
         
-        # Формируем запрос к LM Studio с улучшенными параметрами
         request = {
             "messages": context,
             "max_tokens": 500,
@@ -128,77 +120,70 @@ def handle_message(message):
             "stream": False
         }
         
-        print("🔄 Отправка запроса к LM Studio...")
+        print("Отправка запроса к LM Studio...")
         
-        # Отправляем запрос к LM Studio
         response = requests.post(
             'http://127.0.0.1:1234/v1/chat/completions',
             json=request,
             timeout=60
         )
         
-        print(f"📡 Статус ответа: {response.status_code}")
+        print(f"Статус ответа: {response.status_code}")
         
         if response.status_code == 200:
             model_response = jsons.loads(response.text, ModelResponse)
             assistant_reply = model_response.choices[0].message.content
             
-            # Добавляем ответ ассистента в контекст
             add_assistant_message(user_id, assistant_reply)
             
-            # Отправляем ответ пользователю
             bot.reply_to(message, assistant_reply)
             print(f"🤖 Ответ отправлен: {assistant_reply}")
             print(f"📈 Теперь в контексте: {len(get_user_context(user_id))} сообщений")
             
         else:
-            # Удаляем последнее сообщение пользователя из контекста (т.к. ответ не получен)
             if context and context[-1]["role"] == "user":
                 context.pop()
             
             error_msg = f'Ошибка LM Studio: {response.status_code} - {response.text}'
             bot.reply_to(message, "Произошла ошибка при обращении к модели.")
-            print(f"❌ {error_msg}")
+            print(f"{error_msg}")
             
     except requests.exceptions.ConnectionError:
-        # Удаляем последнее сообщение пользователя из контекста
         context = get_user_context(user_id)
         if context and context[-1]["role"] == "user":
             context.pop()
         
-        error_msg = "❌ Не могу подключиться к LM Studio. Убедитесь, что программа запущена и модель загружена."
+        error_msg = "Не могу подключиться к LM Studio. Убедитесь, что программа запущена и модель загружена."
         bot.reply_to(message, error_msg)
         print(error_msg)
         
     except Exception as e:
-        # Удаляем последнее сообщение пользователя из контекста
         context = get_user_context(user_id)
         if context and context[-1]["role"] == "user":
             context.pop()
         
         error_msg = f'Произошла ошибка: {str(e)}'
         bot.reply_to(message, "Произошла ошибка при обработке сообщения.")
-        print(f"❌ {error_msg}")
+        print(f"{error_msg}")
 
-# Функция проверки подключения к LM Studio
 def check_lm_studio_connection():
     try:
         response = requests.get('http://127.0.0.1:1234/v1/models', timeout=5)
         if response.status_code == 200:
-            print("✅ LM Studio подключен успешно")
+            print("LM Studio подключен успешно")
             return True
         else:
-            print("❌ LM Studio не отвечает")
+            print("LM Studio не отвечает")
             return False
     except Exception as e:
-        print(f"❌ Ошибка подключения к LM Studio: {e}")
+        print(f"Ошибка подключения к LM Studio: {e}")
         return False
 
-# Запуск бота
 if __name__ == '__main__':
     if check_lm_studio_connection():
         print("🤖 Бот с поддержкой контекста запускается...")
         print("📝 Доступные команды: /start, /model, /clear, /context")
         bot.polling(none_stop=True)
     else:
-        print("⚠️  Сначала запустите LM Studio с загруженной моделью!")
+
+        print("Сначала запустите LM Studio с загруженной моделью!")
